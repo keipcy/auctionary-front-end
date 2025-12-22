@@ -6,10 +6,17 @@
 
     <p v-if="counter >= 5">Big numer</p>
     <p v-else>Little number</p>
+
+    <Login />
+    <ToDoList />
+
   </div>
 </template>
 
 <script>
+  import Login from "./Login.vue"
+  import ToDoList from "./ToDoList.vue"
+
   export default {
     data(){
       return {
@@ -21,6 +28,10 @@
       increment(){
         this.counter ++;
       }
+    },
+    components: {
+      Login,
+      ToDoList
     }
   }
 </script>
