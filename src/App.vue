@@ -1,39 +1,31 @@
 <template>
-  <div>
-    <h1>{{ welcome_message }}</h1>
-    <p>Counter: {{ counter }}</p>
-    <button v-on:click="increment">Add one</button>
-
-    <p v-if="counter >= 5">Big numer</p>
-    <p v-else>Little number</p>
-
-    <Login />
-    <ToDoList />
-
+  <div class="app">
+    <router-view />
   </div>
 </template>
 
 <script>
-  import Login from "./Login.vue"
-  import ToDoList from "./ToDoList.vue"
-
-  export default {
-    data(){
-      return {
-        welcome_message: "Hello World!",
-        counter: 0
-      }
-    },
-    methods: {
-      increment(){
-        this.counter ++;
-      }
-    },
-    components: {
-      Login,
-      ToDoList
-    }
-  }
+export default {
+  name: 'App'
+};
 </script>
 
-<style scoped></style>
+<style scoped>
+.app {
+  min-height: 100vh;
+}
+</style>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+</style>
