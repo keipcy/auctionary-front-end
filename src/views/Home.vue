@@ -3,8 +3,7 @@
         <header class="top-bar">
             <div class="brand" @click="$router.push('/')">Booktionary</div>
             <nav class="nav-left">
-                <a href="#search">Search Items</a>
-                <a href="#" @click.prevent="$router.push('/post')">Post Items</a>
+                <a href="#" @click.prevent="$router.push('/post')">Post Your Book</a>
             </nav>
             <nav class="nav-right">
                 <div v-if="isLoggedIn" class="user-info">
@@ -17,9 +16,9 @@
 
         <main class="hero">
             <div class="hero-content">
-                <h1>Find and share standout items</h1>
-                <p class="subtitle">Browse auctions, post your finds, and stay ahead of the next bid.</p>
-                <div class="search-bar" id="search">
+                <h1>Find and Share Books on our First Class Book Auction Site</h1>
+                <p class="subtitle">Browse auctions, post your books, and stay ahead of the next bid.</p>
+                <div class="search-bar">
                     <input
                         v-model="query"
                         type="search"
@@ -39,7 +38,7 @@
                     <p>{{ searchError }}</p>
                 </div>
 
-                <div v-if="searchResults.length > 0" class="search-results">
+                <div v-if="searchPerformed && searchResults.length > 0" class="search-results">
                     <h2>Search Results</h2>
                     <div class="results-grid">
                         <div v-for="item in searchResults" :key="item.item_id" class="result-card" @click="viewItem(item.item_id)">
@@ -50,18 +49,31 @@
                     </div>
                 </div>
 
-                <div v-else-if="!searching && availableItems.length > 0" class="available-items">
+                <div v-else-if="searchPerformed && !searching && searchResults.length === 0" class="empty-state">
+                    <p>No items available for your search.</p>
+                </div>
+
+                <div v-else-if="!searchPerformed && availableItems.length > 0" class="available-items">
                     <h2>Available Items</h2>
                     <div class="results-grid">
-                        <div v-for="item in availableItems" :key="item.item_id" class="result-card" @click="viewItem(item.item_id)">
+                        <div v-for="item in paginatedItems" :key="item.item_id" class="result-card" @click="viewItem(item.item_id)">
                             <h3>{{ item.title || item.name }}</h3>
                             <p>{{ item.description }}</p>
                             <p class="price" v-if="item.starting_bid">£{{ formatPrice(item.starting_bid) }}</p>
                         </div>
                     </div>
+                    <div v-if="totalPages > 1" class="pagination">
+                        <button @click="currentPage--" :disabled="!hasPrevPage" class="pagination-btn">
+                            ← Previous
+                        </button>
+                        <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+                        <button @click="currentPage++" :disabled="!hasNextPage" class="pagination-btn">
+                            Next →
+                        </button>
+                    </div>
                 </div>
 
-                <div v-else-if="!searching && !loadingItems && availableItems.length === 0" class="empty-state">
+                <div v-else-if="!searchPerformed && !searching && !loadingItems && availableItems.length === 0" class="empty-state">
                     <p>No items available at the moment.</p>
                 </div>
             </div>
@@ -88,8 +100,27 @@ import Footer from '../components/Footer.vue';
                 searching: false,
                 searchError: '',
                 availableItems: [],
-                loadingItems: false
+                loadingItems: false,
+                searchPerformed: false,
+                currentPage: 1,
+                itemsPerPage: 6
             };
+        },
+        computed: {
+            paginatedItems() {
+                const start = (this.currentPage - 1) * this.itemsPerPage;
+                const end = start + this.itemsPerPage;
+                return this.availableItems.slice(start, end);
+            },
+            totalPages() {
+                return Math.ceil(this.availableItems.length / this.itemsPerPage);
+            },
+            hasPrevPage() {
+                return this.currentPage > 1;
+            },
+            hasNextPage() {
+                return this.currentPage < this.totalPages;
+            }
         },
         mounted() {
             this.checkLoginStatus();
@@ -98,10 +129,15 @@ import Footer from '../components/Footer.vue';
         methods: {
             loadAvailableItems() {
                 this.loadingItems = true;
-                coreService.searchItems()
+                // Fetch all active items (auctions that haven't ended yet)
+                const now = Math.floor(Date.now() / 1000);
+                // Request more items to ensure we get all available ones
+                coreService.searchItems('', 100)
                     .then((results) => {
-                        this.availableItems = results;
+                        // Filter to show only active auctions (end_date is in seconds from backend)
+                        this.availableItems = results.filter(item => item.end_date > now);
                         this.loadingItems = false;
+                        this.currentPage = 1; // Reset to first page when loading items
                     })
                     .catch((error) => {
                         console.error('Failed to load items:', error);
@@ -135,13 +171,18 @@ import Footer from '../components/Footer.vue';
                 this.userEmail = '';
             },
             onSearch() {
-                if (!this.query.trim()) return;
-                
+                const q = this.query.trim();
+                if (!q) {
+                    this.searchResults = [];
+                    this.searchPerformed = false;
+                    return;
+                }
+
                 this.searching = true;
                 this.searchError = '';
-                this.searchResults = [];
-                
-                coreService.searchItems()
+                this.searchPerformed = true;
+
+                coreService.searchItems(q)
                     .then((results) => {
                         this.searchResults = results;
                         this.searching = false;
@@ -376,6 +417,48 @@ import Footer from '../components/Footer.vue';
     padding: 3rem 1.5rem;
     color: var(--muted);
     font-size: 1.1rem;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding: 1rem;
+}
+
+.pagination-btn {
+    padding: 0.75rem 1.5rem;
+    background: var(--accent);
+    color: white;
+    border: 2px solid var(--accent);
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(45, 90, 61, 0.2);
+}
+
+.pagination-btn:disabled {
+    background: var(--stroke);
+    border-color: var(--stroke);
+    color: var(--muted);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.page-info {
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 1rem;
 }
 
 @media (max-width: 800px) {

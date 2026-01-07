@@ -17,12 +17,12 @@
         <main class="post-container">
             <div v-if="!isLoggedIn" class="login-required">
                 <h2>Login Required</h2>
-                <p>You need to be logged in to post an item.</p>
+                <p>You need to be logged in to post your book.</p>
                 <button @click="$router.push('/login')" class="btn-primary">Go to Login</button>
             </div>
 
             <div v-else class="post-form-container">
-                <h1>Post a New Item</h1>
+                <h1>Post a New Book</h1>
                 <p class="subtitle">Create your auction listing</p>
 
                 <form @submit.prevent="handleSubmit" class="post-form">
@@ -49,17 +49,18 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="starting_bid">Starting Bid (in pence) *</label>
+                        <label for="starting_bid">Starting Bid (£) *</label>
                         <input
                             id="starting_bid"
-                            v-model.number="formData.starting_bid"
+                            v-model="startingBidInput"
                             type="number"
                             min="0"
-                            placeholder="e.g., 1000 for £10.00"
+                            step="0.01"
+                            placeholder="e.g., 3.99"
                             required
                             @wheel.prevent
                         />
-                        <small class="helper-text">Enter amount in pence (100 = £1.00)</small>
+                        <small class="helper-text">Enter amount in pounds</small>
                     </div>
 
                     <div class="form-group">
@@ -116,6 +117,7 @@ export default {
                 starting_bid: null,
                 end_date: null
             },
+            startingBidInput: '',
             endDateInput: '',
             error: null,
             success: null,
@@ -146,6 +148,21 @@ export default {
             this.error = null;
             this.success = null;
 
+            // Validate and convert starting bid from pounds to pence
+            if (!this.startingBidInput || this.startingBidInput <= 0) {
+                this.error = 'Please enter a valid starting bid';
+                return;
+            }
+
+            // Check for more than 2 decimal places
+            if (!/^\d+(\.\d{1,2})?$/.test(this.startingBidInput.toString())) {
+                this.error = 'Starting bid must have a maximum of 2 decimal places';
+                return;
+            }
+
+            // Convert pounds to pence
+            this.formData.starting_bid = Math.round(parseFloat(this.startingBidInput) * 100);
+
             // Convert datetime-local to Unix timestamp
             const endDate = new Date(this.endDateInput);
             this.formData.end_date = Math.floor(endDate.getTime() / 1000);
@@ -161,6 +178,18 @@ export default {
 
             const token = localStorage.getItem('session_token');
             
+            if (!token) {
+                this.error = 'Session expired. Please log in again.';
+                this.submitting = false;
+                setTimeout(() => {
+                    this.$router.push('/login');
+                }, 1500);
+                return;
+            }
+
+            console.log('Submitting with token:', token);
+            console.log('Form data:', this.formData);
+            
             fetch('http://localhost:3333/item', {
                 method: 'POST',
                 headers: {
@@ -173,7 +202,11 @@ export default {
                 if (response.status === 201) {
                     return response.json();
                 } else if (response.status === 401) {
-                    throw new Error('Unauthorized. Please log in again.');
+                    // Clear invalid session
+                    localStorage.removeItem('session_token');
+                    localStorage.removeItem('user_email');
+                    localStorage.removeItem('user_id');
+                    throw new Error('Session expired. Redirecting to login...');
                 } else {
                     return response.json().then(data => {
                         throw new Error(data.error_message || 'Failed to post item');
@@ -192,6 +225,13 @@ export default {
             .catch(err => {
                 this.error = err.message || 'Failed to post item. Please try again.';
                 this.submitting = false;
+                
+                // If unauthorized, redirect to login after showing error
+                if (err.message.includes('Session expired') || err.message.includes('Unauthorized')) {
+                    setTimeout(() => {
+                        this.$router.push('/login');
+                    }, 2000);
+                }
             });
         },
         handleLogout() {

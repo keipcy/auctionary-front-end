@@ -1,7 +1,16 @@
 const API_BASE_URL = 'http://localhost:3333';
 
-const searchItems = () => {
-    return fetch(`${API_BASE_URL}/search`).then((response) => {
+const searchItems = (query = '', limit = null) => {
+    let url = query 
+        ? `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`
+        : `${API_BASE_URL}/search`;
+    
+    // Add limit parameter if specified
+    if (limit) {
+        url += (query ? '&' : '?') + `limit=${limit}`;
+    }
+    
+    return fetch(url).then((response) => {
         if(response.status === 200){
             return response.json()
         }else{

@@ -46,7 +46,7 @@
                             <div class="info-row">
                                 <span class="label">Current Bid:</span>
                                 <div style="position: relative;">
-                                    <span class="value current-bid">£{{ formatPrice(item.current_bid) }}</span>
+                                    <span class="value current-bid" @click="showBidderInfo" style="cursor: pointer;">£{{ formatPrice(item.current_bid) }}</span>
                                     <div v-if="showingBidder && item.current_bid_holder" class="bidder-popup">
                                         <p><strong>{{ item.current_bid_holder.first_name }} {{ item.current_bid_holder.last_name }}</strong></p>
                                         <p class="timestamp">{{ formatDate(lastBidTime) }}</p>
@@ -77,15 +77,15 @@
                         </div>
                     </div>
 
-                    <div v-if="isLoggedIn && getAuctionStatus(item.end_date).text === 'Active'" class="bid-section">
+                    <div v-if="isLoggedIn && getAuctionStatus(item.end_date).text === 'Active'" class="detail-section bid-section">
                         <h2>Place a Bid</h2>
                         <div class="bid-form">
                             <input 
-                                v-model.number="bidAmount" 
+                                v-model="bidAmount" 
                                 type="number" 
                                 :min="formatPrice(item.current_bid)"
                                 step="0.01"
-                                placeholder="Enter your bid amount in £"
+                                placeholder="Enter bid in £ (e.g., 15.00)"
                                 class="bid-input"
                             />
                             <button @click="placeBid" class="btn-primary">Place Bid</button>
@@ -94,7 +94,7 @@
                         <p v-if="bidSuccess" class="bid-success">{{ bidSuccess }}</p>
                     </div>
 
-                    <div class="bid-history-section">
+                    <div class="detail-section bid-history-section">
                         <h2>Bid History</h2>
                         <div v-if="bidHistory.length > 0" class="bid-history">
                             <div v-for="(bid, index) in bidHistory" :key="index" class="history-item">
@@ -108,11 +108,11 @@
                             </div>
                         </div>
                         <div v-else class="no-bids">
-                            <p>No bids yet. Be the first to bid!</p>
+                            <p>No bids yet.</p>
                         </div>
                     </div>
 
-                    <div class="questions-section">
+                    <div class="detail-section questions-section">
                         <h2>Questions & Answers</h2>
                         
                         <!-- Ask/Answer Form -->
@@ -160,7 +160,7 @@
                             </div>
                         </div>
                         <div v-else class="no-questions">
-                            <p>No questions yet. Be the first to ask!</p>
+                            <p>No questions yet.</p>
                         </div>
                     </div>
                 </div>
@@ -432,94 +432,6 @@ export default {
     margin-top: 1rem;
 }
 
-.bid-input {
-    flex: 1;
-    padding: 0.75rem;
-    border: 2px solid var(--stroke);
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    background: white;
-    color: var(--ink);
-}
-
-.bid-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.1);
-}
-
-.detail-section {
-    margin-bottom: 2rem;
-}
-
-.detail-section h2 {
-    font-size: 1.3rem;
-    color: var(--navy);
-    margin-bottom: 1rem;
-    border-left: 4px solid var(--accent);
-    padding-left: 1rem;
-    font-weight: 700;
-}
-
-.description {
-    color: var(--ink);
-    line-height: 1.7;
-    font-size: 1rem;
-}
-
-.bid-info, .timeline-info {
-    background: var(--surface);
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--stroke);
-}
-
-.info-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--stroke);
-}
-
-.info-row:last-child {
-    border-bottom: none;
-}
-
-.label {
-    font-weight: 600;
-    color: var(--muted);
-}
-
-.value {
-    color: var(--ink);
-    font-weight: 500;
-}
-
-.current-bid {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--accent);
-}
-
-.status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 0.375rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.status.active {
-    background: rgba(45, 90, 61, 0.15);
-    color: var(--accent-strong);
-    border: 1px solid var(--accent);
-}
-
-.status.ended {
-    background: rgba(192, 57, 43, 0.15);
-    color: #c0392b;
-    border: 1px solid #e74c3c;
-}
-
 .bid-section {
     background: var(--surface);
     padding: 1.5rem;
@@ -700,16 +612,7 @@ export default {
     margin-bottom: 2rem;
 }
 
-.questions-section h2 {
-    font-size: 1.3rem;
-    color: var(--navy);
-    margin-bottom: 1rem;
-    border-left: 4px solid var(--accent);
-    padding-left: 1rem;
-    font-weight: 700;
-}
-
-.question-form, .answer-form {
+.question-form {
     background: var(--surface);
     padding: 1.5rem;
     border-radius: 0.5rem;
@@ -725,19 +628,7 @@ export default {
 
 .question-input, .answer-input {
     width: 100%;
-    padding: 0.75rem;
-    border: 2px solid var(--stroke);
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    font-family: inherit;
-    resize: vertical;
     margin-bottom: 0.75rem;
-}
-
-.question-input:focus, .answer-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.1);
 }
 
 .questions-list {
